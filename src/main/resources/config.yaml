@@ -1,0 +1,13 @@
+database:
+  host: "localhost"
+  port: "3306"
+  user: "root"
+  database: "corona_virus"
+  
+file:
+  warehouse: "C:/Users/slazarevic/Desktop/Warehouse/warehouse/warehouse"
+
+email: 
+  host: "smtp.gmail.com"
+  port: "587"
+  user: "stefanlazarevic92@hotmail.com"

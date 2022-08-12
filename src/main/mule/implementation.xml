@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+	<flow name="wareHouse" doc:id="d69675b3-e87f-4cba-8cb4-fd0b8ba9b068" >
+		<http:listener doc:name="Listener" doc:id="cf5649f1-21fc-4377-98ee-8cf43e2af47e" config-ref="HTTP_Listener_config" path="/api"/>
+		<file:read doc:name="Read" doc:id="01ce6622-9dee-48d0-ae3e-899d040d6094" config-ref="File_Config" path="C:\Users\slazarevic\Desktop\Warehouse\warehouse\warehouse.txt" outputMimeType="application/json">
+			<ee:repeatable-file-store-stream bufferUnit="BYTE" />
+		</file:read>
+		<ee:transform doc:name="Transform Message" doc:id="42bebc0b-cd38-4508-943e-ad4e464d065f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[payload]" doc:name="warehouseShoes" doc:id="9205dfd1-cc8a-470e-accf-d283d4fed07d" variableName="warehouseShoes"/>
+		<flow-ref doc:name="Flow Reference" doc:id="5c079c49-4955-4c7e-a8d3-6db8a06e421f" name="ShoesStore"/>
+	</flow>
+	<flow name="ShoesStore" doc:id="7ee556fe-7ac0-445d-aae3-7cb40289869a" >
+		<db:select doc:name="Select" doc:id="af225656-f831-4409-8030-501c9e27611d" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT *
+FROM product]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="71c76bf5-136b-48fa-a0c9-d06897768c79" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[payload]" doc:name="dbShoes" doc:id="d5cf8cbb-7a83-425e-8fb0-e69525c015dc" variableName="dbShoes"/>
+		<flow-ref doc:name="Flow Reference" doc:id="b455486d-26f7-4f34-a811-1c37638a388b" name="CompareFlow"/>
+	</flow>
+	<flow name="CompareFlow" doc:id="b59c8f85-9ac0-450a-a003-03ef9ae2a9a5" >
+		<ee:transform doc:name="Transform Message" doc:id="6f49ea54-304d-4e18-9af5-4e689479fef1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var warehouseIds = vars.warehouseShoes.productid
+---
+{
+    unmatched: vars.dbShoes filter not contains(warehouseIds, $.code)
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<email:send doc:name="Send" doc:id="aa4f001a-fe1a-40e1-9bbb-a7a5c70aeb78" fromAddress="stefanlazarevic92@hotmail.com" subject="Patike" config-ref="Email_SMTP">
+			<email:to-addresses >
+				<email:to-address value="stefanlazarevic92@hotmail.com" />
+			</email:to-addresses>
+			<email:body contentType="text/html" encoding="UTF-8" >
+				<email:content ><![CDATA[#["REPORTS"]]]></email:content>
+			</email:body>
+			<email:attachments ><![CDATA[
+        #[{
+          'json-attachment' : payload
+        }]]]></email:attachments>
+		</email:send>
+	</flow>
+</mule>
